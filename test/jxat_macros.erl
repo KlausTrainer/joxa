@@ -56,16 +56,20 @@ given([a,module,that,contains,a,macro,that,errors], _State, _) ->
     {ok, Source}.
 
 'when'([joxa,is,called,on,this,module], Source, _) ->
-    Result = 'joxa-compiler':forms(Source, []),
-    {ok, Result}.
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    {ok, Ctx}.
+
 then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    ?assertMatch({module, 'jxat-macro-test'},
+                 code:load_binary('jxat-macro-test', "jxat-macro-test.jxa", 'joxa-cmp-ctx':'result-ctx'(Ctx))),
     {ok, Ctx};
 then([an,error,is,produced], Ctx, _) ->
     ?assertMatch(true, 'joxa-compiler':'has-errors?'(Ctx)),
     {ok, Ctx};
 then([that,error,is,in,the,error,list], Ctx, _) ->
-    ErrorList = 'joxa-cmp-ctx':'get-context'(errors, Ctx),
+    ErrorList = 'joxa-cmp-ctx':'errors-ctx'(Ctx),
     ?assert(lists:any(fun(Err) ->
                               case Err of
                                   {{'macro-failure',{'jxat-error-macro-test',test1,2},

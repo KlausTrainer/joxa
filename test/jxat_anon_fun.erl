@@ -27,11 +27,13 @@ given([a,module,that,has,an,anonymous,function], _State, _) ->
     {ok, Source}.
 
 'when'([joxa,is,called,on,this,module], Source, _) ->
-    Result = 'joxa-compiler':forms(Source, []),
-    {ok, Result}.
-then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
-    {ok, Ctx};
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast).
+
+then([a,beam,binary,is,produced], Beam, _) ->
+    ?assertMatch({module, 'jxat-anon-fun'},
+                 code:load_binary('jxat-anon-fun', "jxat-anon-fun.jxa", Beam)),
+    {ok, Beam};
 then([the,described,function,can,be,called,'and',works,correctly],
      State, _) ->
     ?assertMatch([{'--joxa-info',1},

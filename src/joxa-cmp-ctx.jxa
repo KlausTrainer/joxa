@@ -413,6 +413,8 @@
 (defn+ handle_call (request from raw-ctx)
    (let* (result
         (case request
+          (:aliases
+           {raw-ctx (get-context :aliases raw-ctx)})
           (:annots
            {raw-ctx (get-context :annots raw-ctx)})
           (:filename
@@ -779,6 +781,9 @@
 
 (defn+ add-alias-ctx (ctx aliased-name namespace)
   (gen-server/cast ctx {:add-alias aliased-name namespace}))
+
+(defn+ aliases-ctx (ctx)
+  (gen-server/call ctx :aliases))
 
 (defn+ add-require-ctx (ctx namespace joxify)
   (gen-server/cast ctx {:add-require namespace joxify}))

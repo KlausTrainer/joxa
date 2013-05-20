@@ -26,8 +26,9 @@ do_test() ->
                   (defn+ do-test2 (c)
                       c)
                    ">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Result} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-do-test'}, code:load_binary('jxat-do-test', "jxat-do-test.jxa", Result)),
     ?assertMatch([{'--joxa-info',1},
                   {'--joxa-info',2},
                   {'do-test0',1},

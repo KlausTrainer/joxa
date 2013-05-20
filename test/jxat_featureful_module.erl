@@ -20,22 +20,25 @@ given([a,featureful,module], _State, _) ->
                                            absname/1 absname_join/2))))">>,
     {ok, Source}.
 
-'when'([joxa,is,called,on,this,module], State, _) ->
-    Result = 'joxa-compiler':forms(State, []),
-    {ok, Result}.
+'when'([joxa,is,called,on,this,module], Source, _) ->
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    {ok, Ctx}.
 
 then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    ?assertMatch({module, 'jxat-featureful'},
+                 code:load_binary('jxat-featureful', "jxat-featureful", 'joxa-cmp-ctx':'result-ctx'(Ctx))),
     {ok, Ctx};
-then([the,joxa,context,for,a,featureful,module,is,correctly,formed], Ctx0, _) ->
-    validate_module(string, Ctx0, [{join,2}]),
-    validate_module(code, Ctx0, []),
-    validate_lists(Ctx0),
-    validate_file(Ctx0),
-    validate_filename(Ctx0),
-    Required = 'joxa-cmp-ctx':'get-context'(requires, Ctx0),
-    Alias = 'joxa-cmp-ctx':'get-context'(aliases, Ctx0),
-    _Attrs = 'joxa-cmp-ctx':'get-context'(attrs, Ctx0),
+then([the,joxa,context,for,a,featureful,module,is,correctly,formed], Ctx, _) ->
+    validate_module(string, Ctx, [{join,2}]),
+    validate_module(code, Ctx, []),
+    validate_lists(Ctx),
+    validate_file(Ctx),
+    validate_filename(Ctx),
+    Required = 'joxa-cmp-ctx':'requires-ctx'(Ctx),
+    Alias = 'joxa-cmp-ctx':'aliases-ctx'(Ctx),
+    _Attrs = 'joxa-cmp-ctx':'attrs-ctx'(Ctx),
     ?assertMatch(true, ec_dictionary:has_key({proplists, split, 2}, Required)),
     ?assertMatch(true, ec_dictionary:has_key({erlang, integer_to_list, 2}, Required)),
     ?assertMatch(true, ec_dictionary:has_key({code, which, 1}, Required)),
@@ -47,9 +50,10 @@ then([the,joxa,context,for,a,featureful,module,is,correctly,formed], Ctx0, _) ->
     ?assertMatch(123,
                  proplists:get_value(sfoo,
                                      'jxat-featureful':module_info(attributes))),
-    {ok, Ctx0}.
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    {ok, Ctx}.
 
-validate_module(Module, Ctx0, Exclude) ->
+validate_module(Module, Ctx, Exclude) ->
     %% module_info causes problems and is mostly ignored
     Exports = [El || El={Fun, _}
                          <- Module:module_info(exports),
@@ -57,20 +61,20 @@ validate_module(Module, Ctx0, Exclude) ->
     FilteredExports = [FunArity || FunArity <- Exports,
                                    not lists:member(FunArity,
                                                     Exclude)],
-    Used = 'joxa-cmp-ctx':'get-context'(uses, Ctx0),
+    Used = 'joxa-cmp-ctx':'uses-ctx'(Ctx),
     lists:foreach(fun(Export={Fun, _}) ->
                           ?assertMatch({Fun, Module},
                                        ec_dictionary:get(Export, Used))
                   end, FilteredExports).
 
-validate_lists(Ctx0) ->
+validate_lists(Ctx) ->
     Required = [{all, 2}],
     Exports = [El || El={Fun, _}
                          <- lists:module_info(exports),
                      Fun =/= module_info],
     FilteredExports = [FunArity || FunArity <- Exports,
                                    not lists:member(FunArity, Required)],
-    Used = 'joxa-cmp-ctx':'get-context'(uses, Ctx0),
+    Used = 'joxa-cmp-ctx':'uses-ctx'(Ctx),
     lists:foreach(fun(Export={Fun, _}) ->
                           ?assertMatch({Fun, lists},
                                        ec_dictionary:get(Export, Used))
@@ -88,7 +92,7 @@ validate_lists(Ctx0) ->
                   %% Append/2 actually exists in file name and gets imported from there.
                   RemovedConflicts).
 
-validate_file(Ctx0) ->
+validate_file(Ctx) ->
     DescUsed = [{{chgrp, 2}, change_group},
                 {{chmod, 2}, change_mode}],
     Exports = [El || El={Fun, _}
@@ -99,7 +103,7 @@ validate_file(Ctx0) ->
                                                     [{delete, 1},
                                                      {change_group, 2},
                                                      {change_mode, 2}])],
-    Used = 'joxa-cmp-ctx':'get-context'(uses, Ctx0),
+    Used = 'joxa-cmp-ctx':'uses-ctx'(Ctx),
     lists:foreach(fun({Export, Target}) ->
                           ?assertMatch({Target, file},
                                        ec_dictionary:get(Export, Used))
@@ -109,7 +113,7 @@ validate_file(Ctx0) ->
                                        ec_dictionary:get(Export, Used))
                   end, FilteredExports).
 
-validate_filename(Ctx0) ->
+validate_filename(Ctx) ->
     Exports = [El || El={Fun, _}
                          <- filename:module_info(exports),
                      Fun =/= module_info],
@@ -121,7 +125,7 @@ validate_filename(Ctx0) ->
     FilteredExports = [FunArity || FunArity <- Exports,
                                    not lists:member(FunArity,
                                                     DescExclude)],
-    Used = 'joxa-cmp-ctx':'get-context'(uses, Ctx0),
+    Used = 'joxa-cmp-ctx':'uses-ctx'(Ctx),
     lists:foreach(fun(Export={Target, _}) ->
                           ?assertMatch({Target, filename},
                                        ec_dictionary:get(Export, Used))

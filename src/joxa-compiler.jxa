@@ -300,36 +300,57 @@
 ;; implements the normal iterative approach to compilation that allows
 ;; the full use of the language.
 
-(defn internal-forms (ctx input)
-  (case (joxa-cmp-parser/has-more-data-to-parse input)
-    (:false
+(defn internal-forms (ast path ctx)
+  (case ast
+    ([]
      :ok)
-    (:true
-     (case (joxa-cmp-parser/parse ctx input)
-       ({:error _}
-        :error)
-       ({ast0 (= rest {:parse-output _ path _})}
+    ((ast0 . ast1)
+     (case path
+       ((path0 . path1)
+        (joxa-cmp-defs/make-forms (joxa-cmp-path/traverse-path path0) ctx ast0)
+        (case (compile-context ctx :intermediate)
+          (:uncompilable
+           (internal-forms ast1 path1 ctx))
+          (:ok
+           (post-compile-process ctx)
+           (internal-forms ast1 path1 ctx))))
+       (_
         (joxa-cmp-defs/make-forms (joxa-cmp-path/traverse-path path) ctx ast0)
         (case (compile-context ctx :intermediate)
           (:uncompilable
-           (internal-forms ctx rest))
+           (internal-forms ast1 path ctx))
           (:ok
            (post-compile-process ctx)
-           (internal-forms ctx rest))))))))
+           (internal-forms ast1 path ctx))))))))
 
-(defn forms (ctx binary options)
+(defn internal-forms (ast options path ctx)
   (joxa-cmp-ctx/set-context-all-ctx ctx [{:options options}])
-  (internal-forms ctx binary)
+  (internal-forms ast path ctx)
   (do-final-comp ctx)
   (joxa-cmp-ctx/get-raw-context ctx))
 
-(defn+ forms (binary options)
+
+(defn+ forms (ast options path ctx)
+  (internal-forms ast options path ctx)
+  (let* (result (joxa-cmp-ctx/result-ctx ctx))
+    (report-errors-warnings ctx)
+    {:ok result}))
+
+(defn+ forms (ast options path)
   (case (joxa-cmp-ctx/start-context)
     ({:ok ctx}
-     (let* (result (forms ctx binary options))
-       (report-errors-warnings ctx)
+     (let* (result (forms ast options path ctx))
        (joxa-cmp-ctx/stop-context ctx)
        result))))
+
+(defn+ forms (ast options)
+  (forms ast options (joxa-cmp-path/new-path)))
+
+(defn+ forms (ast)
+  (forms ast []))
+
+(defn+ forms* (&rest ast)
+  (forms ast []))
 
 ;; Namespace Info
 ;; -----------
@@ -504,7 +525,28 @@
     (joxa-cmp-ctx/stop-context ctx)
     raw-ctx))
 
+(defn internal-compile-forms (path ctx forms)
+  (case forms
+    ([]
+     (case (compile-context ctx :final)
+       (:ok
+        {:ok (joxa-cmp-ctx/result-ctx ctx)})
+       (_
+        :error)))
+    ((form . rest)
+     (joxa-cmp-defs/make-forms (joxa-cmp-path/traverse-path path) ctx form)
+     (compile-context ctx :intermediate)
+     (internal-compile-forms path ctx rest))))
 
+(defn+ compile-forms (&rest forms)
+  (case (joxa-cmp-ctx/start-context)
+    ({:ok ctx}
+     (joxa-cmp-ctx/options-ctx ctx [])
+     (internal-compile-forms (joxa-cmp-path/new-path) ctx forms)
+     (let* (result (joxa-cmp-ctx/result-ctx ctx))
+       (report-errors-warnings ctx)
+       (joxa-cmp-ctx/stop-context ctx)
+       result))))
 
 
 ;; Compilation Dispatch Framework
@@ -538,17 +580,22 @@
          (file/write_file out-file binary))))))
 
 (defn+ has-errors? (ctx)
-  (case ctx
-    (_ (when (erlang/is_tuple ctx))
-       (let* (errors (joxa-cmp-ctx/get-context :errors ctx)
-             warnings (joxa-cmp-ctx/get-context :warnings ctx))
-         (erlang/or
-          (erlang/> (erlang/length errors) 0)
-          (erlang/> (erlang/length warnings) 0))))
-    (_
+  (case (erlang/or (erlang/is_tuple ctx) (erlang/is_pid ctx))
+    (:true
+     (let* (is-raw-ctx (erlang/is_tuple ctx)
+            errors (case is-raw-ctx
+                     (:true (joxa-cmp-ctx/get-context :errors ctx))
+                     (:false (joxa-cmp-ctx/errors-ctx ctx)))
+            warnings (case is-raw-ctx
+                       (:true (joxa-cmp-ctx/get-context :warnings ctx))
+                       (:false (joxa-cmp-ctx/warnings-ctx ctx))))
+       (erlang/or
+        (erlang/> (erlang/length errors) 0)
+        (erlang/> (erlang/length warnings) 0))))
+    (:false
      :true)))
 
-(defn do-file-transition (_trans-state path ctx)
+(defn+ do-file-transition (_trans-state path ctx)
   (let* (result (joxa-cmp-ctx/get-raw-context ctx))
     (case result
       (val (when (erlang/== (erlang/element 1 val) :context))
@@ -563,6 +610,24 @@
        :ok)))
   {:undefined do-file-transition/3})
 
+(defn do-parse (ctx input acc)
+  (case (joxa-cmp-parser/has-more-data-to-parse input)
+    (:false
+     (lists/unzip (lists/reverse acc)))
+    (:true
+     (case (joxa-cmp-parser/parse ctx input)
+       ({:error _}
+        :error)
+       ({ast1 (= rest {:parse-output _ path _})}
+        (do-parse ctx rest ({ast1 path} . acc)))))))
+
+(defn+ do-parse (ctx input)
+  (do-parse ctx input []))
+
+(defn+ do-parse (input)
+  (case (joxa-cmp-ctx/start-context)
+    ({:ok ctx} (do-parse ctx input))))
+
 (defn+ do-compile (filename options)
   (case (joxa-cmp-ctx/start-context)
     ({:ok ctx}
@@ -570,14 +635,17 @@
      (joxa-cmp-ctx/filename-ctx ctx filename)
      (case (file/read_file filename)
        ({:ok binary}
-        (let* (result (forms ctx binary options))
-          (report-errors-warnings ctx)
-          (do-file-transition :undefined (joxa-cmp-path/new-path) ctx)
-          (joxa-cmp-ctx/stop-context ctx)
-          result))
+        (case (do-parse ctx binary)
+          (:error
+           :error)
+          ({ast path}
+           (let* (result (internal-forms ast options path ctx))
+             (report-errors-warnings ctx)
+             (do-file-transition :undefined (joxa-cmp-path/new-path) ctx)
+             (joxa-cmp-ctx/stop-context ctx)
+             result))))
        ({:error reason}
-        {:error  {:file-access reason filename}})))))
-
+        {:error {:file-access reason filename}})))))
 
 
 ;; Command Line Interface

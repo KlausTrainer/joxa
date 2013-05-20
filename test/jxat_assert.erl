@@ -22,8 +22,9 @@ matches_test() ->
 
                 (defn+ does-not-match()
                     (joxa-assert/matches :foo :baz))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-matches-test'}, code:load_binary('jxat-matches-test', "jxat-matches-test.jxa", Beam)),
     ?assertMatch(true, 'jxat-matches-test':matches()),
     ?assertMatch(false, 'jxat-matches-test':'does-not-match'()).
 
@@ -36,8 +37,11 @@ assert_test() ->
 
                 (defn+ assert-fail()
                     (joxa-assert/assert :false))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-assert-test'}, code:load_binary('jxat-assert-test', "jxat-assert-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-test':'assert-pass'()),
     ?assertError({assertion_failed,[{namespace,'jxat-assert-test'},
                                     {line,8},
@@ -55,8 +59,11 @@ assert_match_test() ->
 
                 (defn+ assert-match-fail()
                     (joxa-assert/assert-match :false ((fn () :true))))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-assert-match-test'}, code:load_binary('jxat-assert-match-test', "jxat-assert-match-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-match-test':'assert-match-pass'()),
 
     ?assertError({assertMatch_failed,[{namespace,'jxat-assert-match-test'},
@@ -76,8 +83,11 @@ assert_not_match_test() ->
 
                 (defn+ assert-not-match-fail()
                     (joxa-assert/assert-not-match :true ((fn () :true))))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-assert-not-match-test'}, code:load_binary('jxat-assert-not-match-test', "jxat-assert-not-match-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-not-match-test':'assert-not-match-pass'()),
     ?assertError({assertNotMatch_failed,[{namespace,'jxat-assert-not-match-test'},
                                          {line,8},
@@ -96,8 +106,11 @@ assert_equal_test() ->
 
                 (defn+ assert-equal-fail()
                     (joxa-assert/assert-equal :false ((fn () :true))))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-assert-equal-test'}, code:load_binary('jxat-assert-equal-test', "jxat-assert-equal-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-equal-test':'assert-equal-pass'()),
     ?assertError({assertEqual_failed,[{namespace,'jxat-assert-equal-test'},
                                       {line,8},
@@ -116,8 +129,11 @@ assert_not_equal_test() ->
 
                 (defn+ assert-not-equal-fail()
                     (joxa-assert/assert-not-equal :true ((fn () :true))))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-assert-not-equal-test'}, code:load_binary('jxat-assert-not-equal-test', "jxat-assert-not-equal-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-not-equal-test':'assert-not-equal-pass'()),
     ?assertError({assertNotEqual_failed,[{namespace,'jxat-assert-not-equal-test'},
                                          {line,8},
@@ -136,8 +152,9 @@ assert_exception_test() ->
                 (defn+ assert-exception-fail()
                     (joxa-assert/assert-exception :error :foo-bar
                            (erlang/throw :not-foo-bar)))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-assert-exception-test'}, code:load_binary('jxat-assert-exception-test', "jxat-assert-exception-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-exception-test':'assert-exception-pass'()),
     ?assertError({assertException_failed,
                   [{namespace,'jxat-assert-exception-test'},
@@ -161,8 +178,9 @@ assert_error_test() ->
                 (defn+ assert-error-fail()
                     (joxa-assert/assert-error :foo-bar
                            (erlang/throw :foo-bar)))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-assert-error-test'}, code:load_binary('jxat-assert-error-test', "jxat-assert-error-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-error-test':'assert-error-pass'()),
     ?assertError({assertException_failed,
                   [{namespace,'jxat-assert-error-test'},
@@ -186,8 +204,9 @@ assert_exit_test() ->
                 (defn+ assert-exit-fail()
                     (joxa-assert/assert-exit :foo-bar
                            (erlang/throw :foo-bar)))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-assert-exit-test'}, code:load_binary('jxat-assert-exit-test', "jxat-assert-exit-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-exit-test':'assert-exit-pass'()),
     ?assertError({assertException_failed,
                   [{namespace,'jxat-assert-exit-test'},
@@ -210,8 +229,9 @@ assert_throw_test() ->
                 (defn+ assert-throw-fail()
                     (joxa-assert/assert-throw :foo-bar
                            (erlang/exit :foo-bar)))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-assert-throw-test'}, code:load_binary('jxat-assert-throw-test', "jxat-assert-throw-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-exit-test':'assert-exit-pass'()),
     try 'jxat-assert-exit-test':'assert-exit-fail'() catch E:F ->
                                                              io:format("~p:~p~n", [E, F])
@@ -237,8 +257,9 @@ assert_not_exception_test() ->
                 (defn+ assert-not-exception-fail()
                     (joxa-assert/assert-not-exception (:throw) (:foo-bar)
                            (erlang/throw :foo-bar)))">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-assert-not-exception-test'}, code:load_binary('jxat-assert-not-exception-test', "jxat-assert-not-exception-test.jxa", Beam)),
     ?assertMatch(ok, 'jxat-assert-not-exception-test':'assert-not-exception-pass'()),
     ?assertError({assertNotException_failed,
                   [{namespace,'jxat-assert-not-exception-test'},

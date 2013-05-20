@@ -66,16 +66,18 @@ given([another,module,uses,those,records], Source1, _) ->
     {ok, {Source1, Source2}}.
 
 'when'([joxa,is,called,on,these,modules], {Source1, Source2}, _) ->
-    Result1 = 'joxa-compiler':forms(Source1, []),
-    Result2 = 'joxa-compiler':forms(Source2, []),
-    {ok, {Result1, Result2}}.
+    {Ast1, _Path1} = 'joxa-compiler':'do-parse'(Source1),
+    {ok, Beam1} = 'joxa-compiler':forms(Ast1),
+    {Ast2, _Path2} = 'joxa-compiler':'do-parse'(Source2),
+    {ok, Beam2} = 'joxa-compiler':forms(Ast2),
+    {ok, {Beam1, Beam2}}.
 
-then([a,beam,binary,is,produced,for,both], {Ctx1, Ctx2}, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx1))),
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx2))),
-    ?assertMatch(false, 'joxa-compiler':'has-errors?'(Ctx1)),
-    ?assertMatch(false, 'joxa-compiler':'has-errors?'(Ctx2)),
-    {ok, ok};
+then([a,beam,binary,is,produced,for,both], {Beam1, Beam2}, _) ->
+    ?assertMatch({module, 'jxat-records-def-test'},
+                 code:load_binary('jxat-records-def-test', "jxat-records-def-test.jxa", Beam1)),
+    ?assertMatch({module, 'jxat-records-uses-test'},
+                 code:load_binary('jxat-records-uses-test', "jxat-records-uses-test.jxa", Beam2)),
+    {ok, {Beam1, Beam2}};
 then([the,described,function,can,be,called,'and',works,correctly], State, _) ->
 
     ?assertMatch([{'--joxa-info',1},

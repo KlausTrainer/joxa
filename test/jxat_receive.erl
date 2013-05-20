@@ -25,12 +25,16 @@ given([a,module,that,has,a,'receive',clause], _State, _) ->
     {ok, Source}.
 
 'when'([joxa,is,called,on,this,module], Source, _) ->
-    Result = 'joxa-compiler':forms(Source, []),
-    {ok, Result}.
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    {ok, Ctx}.
 
 then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    ?assertMatch({module, 'jxat-receive-test'},
+                 code:load_binary('jxat-receive-test', "jxat-receive-test.jxa", 'joxa-cmp-ctx':'result-ctx'(Ctx))),
     ?assertMatch(false, 'joxa-compiler':'has-errors?'(Ctx)),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
     {ok, Ctx};
 then([the,described,function,can,be,called,'and',works,correctly], State, _) ->
     Pid = erlang:spawn_link(fun () ->

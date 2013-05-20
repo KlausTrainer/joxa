@@ -32,11 +32,15 @@ given([a,module,that,has,a,function,that,calls,
 
 
 'when'([joxa,is,called,on,this,module], Source, _) ->
-  {ok, 'joxa-compiler':forms(Source, [])}.
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    {ok, Ctx}.
 
 then([a,beam,binary,is,produced], Ctx, _) ->
     ?assertMatch(false, 'joxa-compiler':'has-errors?'(Ctx)),
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    ?assertMatch({module, 'jxat-module-fun'},
+                 code:load_binary('jxat-module-fun', "jxat-module-fun.jxa", 'joxa-cmp-ctx':'result-ctx'(Ctx))),
     ?assertMatch([{'--joxa-info',1},
                   {'--joxa-info',2},
                   {'get-fun',0},
@@ -46,6 +50,7 @@ then([a,beam,binary,is,produced], Ctx, _) ->
                   {module_info,1},
                   {'test-case',0}],
                  lists:sort('jxat-module-fun':module_info(exports))),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
     {ok, Ctx};
 then([the,described,function,returns,the,name,'of',the,module],
      State, _) ->

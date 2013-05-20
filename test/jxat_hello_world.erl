@@ -13,17 +13,19 @@ given([a,module,that,has,a,function,that,calls,
 
 
 'when'([joxa,is,called,on,this,module], Source, _) ->
-  {ok, 'joxa-compiler':forms(Source, [])}.
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast).
 
-then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+then([a,beam,binary,is,produced], Beam, _) ->
+    ?assertMatch({module, 'helloworld'},
+                 code:load_binary('helloworld', "helloworld.jxa", Beam)),
     ?assertMatch([{'--joxa-info',1},
                   {'--joxa-info',2},
                   {'hello-world',1},
                   {module_info,0},
                   {module_info,1}],
                  lists:sort(helloworld:module_info(exports))),
-    {ok, Ctx};
+    {ok, Beam};
 then([the,described,function,can,be,called,'and',works,correctly],
      State, _) ->
     ?assertMatch(ok, helloworld:'hello-world'("Hello World")),

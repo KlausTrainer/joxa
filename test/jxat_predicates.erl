@@ -23,12 +23,13 @@ given([a,module,that,has,a,predicates], _State, _) ->
     {ok, Source}.
 
 'when'([joxa,is,called,on,this,module], Source, _) ->
-    Result = 'joxa-compiler':forms(Source, []),
-    {ok, Result}.
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast).
 
-then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
-    {ok, Ctx};
+then([a,beam,binary,is,produced], Beam, _) ->
+    ?assertMatch({module, 'jxat-predicate-test'},
+                 code:load_binary('jxat-predicate-test', "jxat-predicate-test.jxa", Beam)),
+    {ok, Beam};
 then([the,described,function,can,be,called,'and',works,correctly], State, _) ->
     ?assertMatch([{'--joxa-info',1},
                   {'--joxa-info',2},

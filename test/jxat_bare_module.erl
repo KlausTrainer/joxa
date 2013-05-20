@@ -5,16 +5,19 @@
 -include_lib("eunit/include/eunit.hrl").
 
 given([a,bare,module], _State, _) ->
-    Module = <<"(ns my-module ; Simple module test
+    Source = <<"(ns my-module ; Simple module test
                  )">>,
-    {ok, Module}.
+    {ok, Source}.
 
-'when'([joxa,is,called,on,this,module], State, _) ->
-    Result = 'joxa-compiler':forms(State, []),
-    {ok, Result}.
+'when'([joxa,is,called,on,this,module], Source, _) ->
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, _Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    {ok, Ctx}.
 
 then([a,beam,binary,is,produced], Ctx, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    ?assertMatch({module, 'my-module'},
+                 code:load_binary('my-module', "my-module.jxa", 'joxa-cmp-ctx':'result-ctx'(Ctx))),
     ?assertMatch([{'--joxa-info',1},
                   {'--joxa-info',2},
                   {module_info,0},
@@ -25,5 +28,5 @@ then([a,beam,binary,is,produced], Ctx, _) ->
 
     {ok, Ctx};
 then([the,joxa,context,for,a,bare,module,is,correctly,formed], Ctx, _) ->
-    ?assertMatch('my-module', 'joxa-cmp-ctx':'get-context'('namespace-name', Ctx)),
+    ?assertMatch('my-module', 'joxa-cmp-ctx':'namespace-name-ctx'(Ctx)),
     {ok, Ctx}.

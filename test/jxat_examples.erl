@@ -32,14 +32,16 @@ prop_seive() ->
 (defn+ sieve (v)
   (sieve (lists/seq 2 v) 1))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    RawCtx = 'joxa-cmp-ctx':'get-raw-context'(Ctx),
     ?FORALL(STarget, range(3, 1000),
             begin
-                (is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))
-                 andalso (not 'joxa-compiler':'has-errors?'(Ctx))
+                ({module, 'jxat-sieve-of-eratosthenes'} == code:load_binary('jxat-sieve-of-eratosthenes', "jxat-sieve-of-eratosthenes.jxa", Beam)
+                 andalso (not 'joxa-compiler':'has-errors?'(RawCtx))
                  andalso eratosthenes(STarget) == 'jxat-sieve-of-eratosthenes':sieve(STarget))
             end).
-
 
 
 prop_fib() ->
@@ -54,11 +56,14 @@ prop_fib() ->
     (_ (when (> n 0))
      (+ (fibo (- n 1))
         (fibo (- n 2)))))) ">>,
-    Ctx = 'joxa-compiler':forms(Source, []),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    RawCtx = 'joxa-cmp-ctx':'get-raw-context'(Ctx),
     ?FORALL(FibTarget, range(0, 15),
             begin
-                (is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))
-                 andalso (not 'joxa-compiler':'has-errors?'(Ctx))
+                ({module, 'jxat-fibonacci'} == code:load_binary('jxat-fibonacci', "jxat-fibonacci.jxa", Beam)
+                 andalso (not 'joxa-compiler':'has-errors?'(RawCtx))
                  andalso fibo(FibTarget) == 'jxat-fibonacci':fibo(FibTarget))
             end).
 

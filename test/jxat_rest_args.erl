@@ -67,14 +67,18 @@ given([a,module,that,has,rest,arguments], _State, _) ->
     {ok, {Source1, Source2}}.
 
 'when'([joxa,is,called,on,this,module], {Source1, Source2}, _) ->
-    Result1 = 'joxa-compiler':forms(Source1, []),
-    Result2 = 'joxa-compiler':forms(Source2, []),
-   {ok, {Result1, Result2}}.
+    {Ast1, _Path1} = 'joxa-compiler':'do-parse'(Source1),
+    {ok, Beam1} = 'joxa-compiler':forms(Ast1),
+    {Ast2, _Path2} = 'joxa-compiler':'do-parse'(Source2),
+    {ok, Beam2} = 'joxa-compiler':forms(Ast2),
+    {ok, {Beam1, Beam2}}.
 
-then([a,beam,binary,is,produced], {Ctx1, Ctx2}, _) ->
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx1))),
-    ?assertMatch(true, is_binary('joxa-cmp-ctx':'get-context'(result, Ctx2))),
-    {ok, {Ctx1, Ctx2}};
+then([a,beam,binary,is,produced], {Beam1, Beam2}, _) ->
+    ?assertMatch({module, 'jxat-rest-test1'},
+                 code:load_binary('jxat-rest-test1', "jxat-rest-test1.jxa", Beam1)),
+    ?assertMatch({module, 'jxat-rest-test2'},
+                 code:load_binary('jxat-rest-test2', "jxat-rest-test2.jxa", Beam2)),
+    {ok, {Beam1, Beam2}};
 then([the,described,function,can,be,called,'and',works,correctly], State, _) ->
     ?assertMatch(2, 'jxat-rest-test1':'--joxa-info'(rest, 'do-test0')),
     ?assertMatch({1,[2,3,4,5,6,7,9,10]}, 'jxat-rest-test2':'do-test1'()),

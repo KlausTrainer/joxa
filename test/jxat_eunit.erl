@@ -20,8 +20,9 @@ under_eunit_test() ->
                 (defn+ under-eunit-pass ()
                     (joxa-eunit/under-eunit?))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {Ast, _Path} = 'joxa-compiler':'do-parse'(Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast),
+    ?assertMatch({module, 'jxat-eunit-under-eunit-test'}, code:load_binary('jxat-eunit-under-eunit-test', "jxat-eunit-under-eunit-test.jxa", Beam)),
     ?assertMatch(true, 'jxat-eunit-under-eunit-test':'under-eunit-pass'()).
 
 test_test() ->
@@ -31,9 +32,12 @@ test_test() ->
                 (defn+ test-test ()
                     (joxa-eunit/-test :foo))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
-    ?assertMatch({5,_}, 'jxat-eunit-test-test':'test-test'()),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-test-test'}, code:load_binary('jxat-eunit-test-test', "jxat-eunit-test-test.jxa", Beam)),
+    ?assertMatch({5, _}, 'jxat-eunit-test-test':'test-test'()),
     {_, Fun} = 'jxat-eunit-test-test':'test-test'(),
     ?assertMatch(foo, Fun()).
 
@@ -44,9 +48,12 @@ assert_test() ->
                 (defn+ assert-test ()
                     (joxa-eunit/-assert (erlang/== :foo :bar)))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
-    ?assertMatch({5,_}, 'jxat-eunit-assert-test':'assert-test'()),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-assert-test'}, code:load_binary('jxat-eunit-assert-test', "jxat-eunit-assert-test.jxa", Beam)),
+    ?assertMatch({5, _}, 'jxat-eunit-assert-test':'assert-test'()),
     {_, Fun} = 'jxat-eunit-assert-test':'assert-test'(),
     ?assertError({assertion_failed,[{namespace,'jxat-eunit-assert-test'},
                                     {line,5},
@@ -65,9 +72,12 @@ assert_not_test() ->
                 (defn+ assert-not-test ()
                     (joxa-eunit/-assert-not (erlang/== :foo :foo)))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
-    ?assertMatch({5,_}, 'jxat-eunit-assert-not-test':'assert-not-test'()),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-assert-not-test'}, code:load_binary('jxat-eunit-assert-not-test', "jxat-eunit-assert-not-test.jxa", Beam)),
+    ?assertMatch({5, _}, 'jxat-eunit-assert-not-test':'assert-not-test'()),
     {_, Fun} = 'jxat-eunit-assert-not-test':'assert-not-test'(),
     ?assertError({assertion_failed,[{namespace,'jxat-eunit-assert-not-test'},
                                     {line,5},
@@ -87,8 +97,11 @@ cmd_test() ->
                 (defn+ cmd-test ()
                     (joxa-eunit/-cmd- \"erl -s init stop\"))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-cmd-test'}, code:load_binary('jxat-eunit-cmd-test', "jxat-eunit-cmd-test.jxa", Beam)),
     ?assertMatch({0, [$E, $s, $h, $e, $l, $l |_]}, 'jxat-eunit-cmd-test':'cmd-test'()).
 
 cmd_status_test() ->
@@ -101,8 +114,11 @@ cmd_status_test() ->
                 (defn+ cmd-status-test2 ()
                     (joxa-eunit/cmd-status  1 \"erl -s init stop\"))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-cmd-status-test'}, code:load_binary('jxat-eunit-cmd-status-test', "jxat-eunit-cmd-status-test.jxa", Beam)),
     ?assertMatch([$E, $s, $h, $e, $l, $l |_],
                  'jxat-eunit-cmd-status-test':'cmd-status-test'()),
 
@@ -124,8 +140,11 @@ assert_cmd_status_test() ->
                 (defn+ assert-cmd-status-test2 ()
                     (joxa-eunit/assert-cmd-status  1 \"erl -s init stop\"))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-assert-cmd-status-test'}, code:load_binary('jxat-eunit-assert-cmd-status-test', "jxat-eunit-assert-cmd-status-test.jxa", Beam)),
     ?assertMatch([$E, $s, $h, $e, $l, $l |_],
                  'jxat-eunit-assert-cmd-status-test':'assert-cmd-status-test'()),
     ?assertError({assertCmd_failed,[{namespace,'jxat-eunit-assert-cmd-status-test'},
@@ -145,8 +164,11 @@ assert_cmd_output_test() ->
                 (defn+ assert-cmd-output-test2 ()
                     (joxa-eunit/assert-cmd-output  \"Foo!\" \"erl -s init stop\"))">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-assert-cmd-output-test'}, code:load_binary('jxat-eunit-assert-cmd-output-test', "jxat-eunit-assert-cmd-output-test.jxa", Beam)),
     ?assertMatch(ok,
                  'jxat-eunit-assert-cmd-output-test':'assert-cmd-output-test'()),
     ?assertError({assertCmdOutput_failed,
@@ -177,8 +199,11 @@ debug_msg_test() ->
                     (joxa-eunit/debug-time \"foo\" (erlang/+ 1 2)))
 ">>,
 
-    Ctx = 'joxa-compiler':forms(Source, []),
-    ?assertMatch(true,is_binary('joxa-cmp-ctx':'get-context'(result, Ctx))),
+    {ok, Ctx} = 'joxa-cmp-ctx':'start-context'(),
+    {Ast, Path} = 'joxa-compiler':'do-parse'(Ctx, Source),
+    {ok, Beam} = 'joxa-compiler':forms(Ast, [], Path, Ctx),
+    'joxa-cmp-ctx':'stop-context'(Ctx),
+    ?assertMatch({module, 'jxat-eunit-debug-msg-test'}, code:load_binary('jxat-eunit-debug-msg-test', "jxat-eunit-debug-msg-test.jxa", Beam)),
     ?assertMatch(ok,
                  'jxat-eunit-debug-msg-test':'debug-msg-test'()),
     ?assertMatch(ok,
